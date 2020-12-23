@@ -25,7 +25,7 @@ public class OkHttpUtil {
                 .header("Accept-Encoding", "gzip,deflate,sdch")
                 .header("Accept-Language", "zh-CN,zh;q=0.8")
                 .header("Connection", "keep-alive")
-                .header("Host", "blog.csdn.net")
+                .header("Host", "yunkun.blog.csdn.net")
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36")
                 .url(url).build();
         Call call = SpringUtils.getBean(OkHttpClient.class).newCall(request);

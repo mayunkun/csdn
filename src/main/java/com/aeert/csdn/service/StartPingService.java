@@ -1,12 +1,15 @@
 package com.aeert.csdn.service;
 
 import com.aeert.csdn.utils.OkHttpUtil;
+import io.vavr.control.Try;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -28,8 +31,11 @@ public class StartPingService implements CommandLineRunner {
     @Value("${blog.url:https://blog.csdn.net/kuangni5808/article/list/}")
     private String blogUrl;
 
-    @Value("${blog.keyWord:kuangni5808/article}")
+    @Value("${blog.keyWord:/article}")
     private String keyWord;
+
+    @Autowired
+    private ThreadPoolTaskExecutor executor;
 
     @Override
     public void run(String... args) throws Exception {
@@ -40,12 +46,12 @@ public class StartPingService implements CommandLineRunner {
         List<String> urls = urls(blogUrl, 1, new ArrayList<>());
         urls.stream().forEach(m -> {
             try {
-                Thread.sleep(new Random().nextInt(2000));
+                Thread.sleep(new Random().nextInt(800));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             try {
-                OkHttpUtil.sendGet(m);
+                String result = OkHttpUtil.sendGet(m);
                 log.info("链接{} 访问成功！", m);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -55,16 +61,15 @@ public class StartPingService implements CommandLineRunner {
     }
 
     private List<String> urls(String url, Integer page, List<String> result) throws IOException {
-        Document document = Jsoup.parse(new URL(url + page).openStream(), "UTF-8", url + page);
-        Elements tables = document.getElementsByClass("article-list").select("a");
-        List<String> urls = tables.stream().filter(m -> m.attr("href").contains(keyWord)).map(m -> m.attr("href")).collect(Collectors.toList());
-        result.addAll(urls);
-        if (urls.size() > 0) {
-            return urls(url, page + 1, result);
-        }
-        return result;
+        return Try.of(() -> {
+            Document document = Jsoup.parse(new URL(url + page).openStream(), "UTF-8", url + page);
+            Elements tables = document.getElementsByClass("article-list").select("a");
+            List<String> urls = tables.stream().filter(m -> m.attr("href").contains(keyWord)).map(m -> m.attr("href")).collect(Collectors.toList());
+            result.addAll(urls);
+            if (urls.size() > 0) {
+                return urls(url, page + 1, result);
+            }
+            return result;
+        }).getOrElseTry(() -> urls(url, page, result));
     }
-
-
-
 }
